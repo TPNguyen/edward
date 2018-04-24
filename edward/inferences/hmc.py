@@ -98,7 +98,7 @@ class HMC(MonteCarlo):
 
     # Calculate acceptance ratio.
     ratio = tf.reduce_sum([0.5 * tf.reduce_sum(tf.square(r))
-                           for r in six.itervalues(old_r_sample)])
+                           for r in six.itervalues(old_r_sample)]) # todo:add in M to replace 1 here. The K(p) = p^tM^(-1)p/2
     ratio -= tf.reduce_sum([0.5 * tf.reduce_sum(tf.square(r))
                             for r in six.itervalues(new_r_sample)])
     ratio += self._log_joint_unconstrained(new_sample)
@@ -191,6 +191,12 @@ class HMC(MonteCarlo):
 
     return log_joint
 
+'''
+    new_sample, new_r_sample = leapfrog(old_sample, old_r_sample,
+                                        self.step_size,
+                                        self._log_joint_unconstrained,
+                                        self.n_steps)
+'''
 
 def leapfrog(z_old, r_old, step_size, log_joint, n_steps):
   z_new = z_old.copy()
@@ -201,7 +207,7 @@ def leapfrog(z_old, r_old, step_size, log_joint, n_steps):
     for i, key in enumerate(six.iterkeys(z_new)):
       z, r = z_new[key], r_new[key]
       r_new[key] = r + 0.5 * step_size * tf.convert_to_tensor(grad_log_joint[i])
-      z_new[key] = z + step_size * r_new[key]
+      z_new[key] = z + step_size * r_new[key] # miss M_i, treat as 1
 
     grad_log_joint = tf.gradients(log_joint(z_new), list(six.itervalues(z_new)))
     for i, key in enumerate(six.iterkeys(z_new)):

@@ -37,6 +37,7 @@ _allowed_symbols = [
     'evaluate',
     'ppc',
     'ppc_density_plot',
+    'ess',
     'ppc_stat_hist_plot',
     'Inference',
     'MonteCarlo',

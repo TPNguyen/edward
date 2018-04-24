@@ -15,6 +15,7 @@ _allowed_symbols = [
     'ppc',
     'ppc_density_plot',
     'ppc_stat_hist_plot',
+    'ess'
 ]
 
 remove_undocumented(__name__, allowed_exception_list=_allowed_symbols)
