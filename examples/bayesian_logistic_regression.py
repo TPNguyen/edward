@@ -12,7 +12,6 @@ import numpy as np
 import tensorflow as tf
 import math
 
-from matplotlib import pyplot as plt
 from edward.models import Bernoulli, Normal, Empirical
 #from edward.criticisms import ess
 
@@ -28,33 +27,36 @@ flags.DEFINE_string("sampler", default="HMC", help="The sampler to use, HMC(Hami
 
 FLAGS = flags.FLAGS
 
+
+
 def mcse(traces, g = None):
-    if (not g):
-        g = lambda x: x
-    n = traces.shape[0]
-    b = int(math.sqrt(n)) # batch size
-    a = int(n/b)
+  if (not g):
+      g = lambda x: x
+  n = traces.shape[0]
+  b = int(math.sqrt(n)) # batch size
+  a = int(n/b)
     
     # apply batch means
-    mu_hat = np.mean(g(traces))
-    batch_means = [np.mean(g(traces[i*b:i*b + a, ])) for i in range(a)]
-    batch_means = np.array(batch_means, dtype = np.float128)
-    var_hat = sum((batch_means - mu_hat)**2)*b/(a-1)
-    se = math.sqrt(var_hat/n) 
-    return var_hat
+  mu_hat = np.mean(g(traces))
+  batch_means = [np.mean(g(traces[i*b:i*b + a, ])) for i in range(a)]
+  batch_means = np.array(batch_means, dtype = np.float128)
+  var_hat = sum((batch_means - mu_hat)**2)*b/(a-1)
+  se = math.sqrt(var_hat/n) 
+  return var_hat
 
 def ess(traces, g = None):
-    iid_var = np.var(traces, axis = 0, dtype = np.float64)
-    print(iid_var)
-    sigma = mcse(traces, g)
-    print(sigma)
-    return (iid_var/sigma)*(traces.shape[0])
+  iid_var = np.var(traces, axis = 0, dtype = np.float64)
+  print(iid_var)
+  sigma = mcse(traces, g)
+  print(sigma)
+  return (iid_var/sigma)*(traces.shape[0])
 
 
 
 
 
 def build_toy_dataset(N, noise_std=0.1):
+
   D = 1
   X = np.linspace(-6, 6, num=N)
   y = np.tanh(X) + np.random.normal(0, noise_std, size=N)
@@ -104,14 +106,14 @@ def main(_):
   # qb_ess = tf.placeholder(tf.float64, name='qb_ess')
   # qb_ess_summary_1 = tf.summary.scalar('qb_ess', qb_ess)
 
-  qb_ess = tf.Variable(3, trainable=False, name="qb_ess", dtype = tf.float64)
+
 
   summary_writer = tf.summary.FileWriter(FLAGS.logdir)
   # tf.get_variable('qb_ess', shape = [1], dtype = tf.float64)
-  tf.summary.scalar('qb_ess', qb_ess)
+  #tf.summary.scalar('qb_ess', qb_ess)
   inference.summarize = tf.summary.merge_all()
 
-  inference.initialize(n_print=10, step_size=0.6, logdir=FLAGS.logdir)
+  inference.initialize(n_print=10,  step_size=0.6, n_steps = 10, logdir=FLAGS.logdir)
 
 
 
@@ -139,10 +141,10 @@ def main(_):
 
 
   # Set up figure.
-  fig = plt.figure(figsize=(8, 8), facecolor='white')
-  ax = fig.add_subplot(111, frameon=False)
-  plt.ion()
-  plt.show(block=False)
+  # fig = plt.figure(figsize=(8, 8), facecolor='white')
+  # ax = fig.add_subplot(111, frameon=False)
+  # plt.ion()
+  # plt.show(block=False)
 
   # Build samples from inferred posterior.
   n_samples = 50
@@ -153,16 +155,31 @@ def main(_):
 
 
 
-
-  for t in range(5000):
+  fullTrace_b = np.empty(1, dtype=np.float128)
+  fullTrace_w = np.empty(1, dtype=np.float128)
+  full_ess_b = np.empty(1, dtype=np.float128)
+  for t in range(2):
     info_dict = inference.update()
     inference.print_progress(info_dict)
 
-    trace2 = sess.run(qb.params)
-
-    qb_ess = ess(trace2)
+    traceb = sess.run(qb.params)
+    print(type(traceb))
+    print(traceb.shape)
+    qb_ess = ess(traceb)
+    print(type(qb_ess))
+    print(qb_ess.shape)
     print("effective sample size")
     print(qb_ess)
+
+    tracew = sess.run(qw.params)
+    qw_ess = ess(tracew)
+
+    
+    if (t % 1 == 0):
+      full_ess_b = np.append(full_ess_b, qb_ess)
+      fullTrace_b = np.append(fullTrace_b, traceb)
+      fullTrace_w = np.append(fullTrace_w, tracew)
+
     #qb_ess = 10.5
     #summary_writer.add_summary(qb_ess, t)
     # summary, val1 = sess.run([qb_ess], feed_dict={'qb_ess': 1.0})
@@ -171,25 +188,39 @@ def main(_):
     
 
 
-    if t % inference.n_print == 0:
-      outputs = probs.eval()
-      # print("start")
-      # print(outputs.shape)
-      # print(type(outputs))
-      # print(outputs[0])
-      # print(outputs[0][0])
-      # print("end")
+    # if t % inference.n_print == 0:
+    #   outputs = probs.eval()
+    #   # print("start")
+    #   # print(outputs.shape)
+    #   # print(type(outputs))
+    #   # print(outputs[0])
+    #   # print(outputs[0][0])
+    #   # print("end")
 
-      # Plot data and functions
-      plt.cla()
-      ax.plot(X_train[:], y_train, 'bx')
-      for s in range(n_samples):
-        ax.plot(inputs[:], outputs[s], alpha=0.2)
+    #   # Plot data and functions
+    #   plt.cla()
+    #   ax.plot(X_train[:], y_train, 'bx')
+    #   for s in range(n_samples):
+    #     ax.plot(inputs[:], outputs[s], alpha=0.2)
 
-      ax.set_xlim([-5, 3])
-      ax.set_ylim([-0.5, 1.5])
-      plt.draw()
-      plt.pause(1.0 / 60.0)
+    #   ax.set_xlim([-5, 3])
+    #   ax.set_ylim([-0.5, 1.5])
+    #   plt.draw()
+    #plt.pause(1.0 / 60.0)
+  # print(fullTrace_b.shape)
+  # print(type(fullTrace_b))
+  
+  plt.figure(1)
+  plt.subplot(211)
+  plt.plot(fullTrace_w)
+  
+  
+
+  plt.subplot(212)
+  plt.plot(full_ess_b)
+  plt.show()
+  
+
 
 if __name__ == "__main__":
   plt.style.use("ggplot")
