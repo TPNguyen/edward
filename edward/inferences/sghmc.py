@@ -80,14 +80,8 @@ class SGHMC(MonteCarlo):
       stddev = tf.sqrt(tf.cast(learning_rate * self.friction, qz.dtype))
       normal = tf.random_normal(event_shape, dtype=qz.dtype)
       sample[z] = old_sample[z] + old_v_sample[z]
-      # v_sample[z] = ((1.0 - 0.5 * self.friction) * old_v_sample[z] +
-      #                learning_rate * tf.convert_to_tensor(grad_log_p) +
-      #                stddev * normal)
-
-      riem_term = 1/(0.5 * old_sample[z]) # For now, fix G (theta) = diag (theta^{-1}) 
       v_sample[z] = ((1.0 - 0.5 * self.friction) * old_v_sample[z] +
-                     learning_rate * tf.convert_to_tensor(grad_log_p) + 
-                     learning_rate * riem_term + 
+                     learning_rate * tf.convert_to_tensor(grad_log_p) +
                      stddev * normal)
 
     # Update Empirical random variables.
