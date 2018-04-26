@@ -8,13 +8,13 @@ import math
 flags = tf.app.flags
 
 flags.DEFINE_integer("N", 50000, "Number of data points.")
-flags.DEFINE_integer("D", 5, "Number of features.")
-flags.DEFINE_integer("T", 50000, "Number of posterior samples.")
+flags.DEFINE_integer("D", 10, "Number of features.")
+flags.DEFINE_integer("T", 20000, "Number of posterior samples.")
 flags.DEFINE_string("logdir", "log", "The directory to save log")
 
 # add a new flag to pass in sampler
 flags.DEFINE_string("sampler", "HMC", "The sampler to use, HMC(Hamiltonian Monte Carlo), SGHMC(Stochastic Hamiltonian Monte Carlo), SGLD(Stochastic gradient Langevin dynamics)")
-
+flags.DEFINE_integer("burnin", 3000, "Burn in period")
 
 FLAGS = flags.FLAGS
 
@@ -29,7 +29,7 @@ def build_toy_dataset(noise_std=0.1):
   # b = np.array((np.float64)(b))
   # print(x.shape)
   # print(b.shape)
-  y = ed.dot(x, b) + np.random.normal(0, noise_std, size=FLAGS.N) # b = 1 
+  y = np.matmul(x, b) + np.random.normal(0, noise_std, size=FLAGS.N) 
   y = Bernoulli(logits=y) 
   return x, y
 
@@ -45,7 +45,9 @@ x_data, y_data = build_toy_dataset(0.1)
 # MODEL
 x = tf.Variable(x_data, trainable=False, dtype = tf.float32)
 # print(type(x))
-beta = Normal(loc=tf.zeros(FLAGS.D), scale=tf.ones(FLAGS.D))
+# beta = Normal(loc=tf.zeros(FLAGS.D), scale=tf.ones(FLAGS.D))
+b1 = tf.lin_space(1.0, 10.0, num=FLAGS.D)
+beta = Normal(loc=b1, scale=tf.ones(FLAGS.D))
 # print(type(beta))
 y = Bernoulli(logits=ed.dot(x, beta))
 
@@ -54,13 +56,14 @@ qbeta = Empirical(params=tf.Variable(tf.zeros([FLAGS.T, FLAGS.D])))
 
 if (FLAGS.sampler == "SGHMC"):
   inference = ed.SGHMC({beta: qbeta}, data={y: y_data})
+  inference.run(step_size=(10 * FLAGS.D)/(FLAGS.N * 1))  
 elif (FLAGS.sampler == "SGLD"):
   inference = ed.SGLD({beta: qbeta}, data={y: y_data})
+  inference.run(step_size=(10 * FLAGS.D)/(FLAGS.N * 1))  
 elif (FLAGS.sampler == "HMC"):
   inference = ed.HMC({beta: qbeta}, data={y: y_data})
-  inference.run(step_size=10/FLAGS.N, n_steps=10) 
+  inference.run(step_size=10/(FLAGS.N * 1), n_steps=FLAGS.D * 10) 
 
-inference.run(step_size=10/FLAGS.N) 
 
 
 sess = ed.get_session() 
@@ -90,9 +93,12 @@ def ess(traces, g = None):
   return (iid_var/sigma)*(traces.shape[0])
 
 
-beta_ess = ess(trace_beta)  
-print("Effect Sampling Size is: ")
-print(beta_ess)
+# beta_ess = ess(trace_beta[:,0])  
+# print("trace beta is: ")
+# print(trace_beta.shape)
+# print(type(trace_beta))
+# print("Effect Sampling Size is: ")
+# print(beta_ess)
 
 # traceb = sess.run(qb.params)
 # print(type(trace_w))
@@ -103,10 +109,17 @@ print(beta_ess)
 # print("effective sample size")
 # print(qb_ess) 
 
+ess_beta = [] 
+for i in range(0, FLAGS.D):
+  ess_beta.append(ess(trace_beta[FLAGS.burnin:,i])) 
+
+print("The effective sampling sizes are: ") 
+print(ess_beta) 
 
 plt.figure(1)
 plt.subplot(211)
 plt.plot(trace_beta)
+# plt.ylim((0, 10))
 plt.show() 
   
   
