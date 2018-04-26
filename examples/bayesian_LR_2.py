@@ -7,13 +7,13 @@ import math
 
 flags = tf.app.flags
 
-flags.DEFINE_integer("N", default=50000, help="Number of data points.")
-flags.DEFINE_integer("D", default=1, help="Number of features.")
-flags.DEFINE_integer("T", default=2000, help="Number of posterior samples.")
-flags.DEFINE_string("logdir", default="log", help="The directory to save log")
+flags.DEFINE_integer("N", 50000, "Number of data points.")
+flags.DEFINE_integer("D", 5, "Number of features.")
+flags.DEFINE_integer("T", 50000, "Number of posterior samples.")
+flags.DEFINE_string("logdir", "log", "The directory to save log")
 
 # add a new flag to pass in sampler
-flags.DEFINE_string("sampler", default="HMC", help="The sampler to use, HMC(Hamiltonian Monte Carlo), SGHMC(Stochastic Hamiltonian Monte Carlo), SGLD(Stochastic gradient Langevin dynamics)")
+flags.DEFINE_string("sampler", "HMC", "The sampler to use, HMC(Hamiltonian Monte Carlo), SGHMC(Stochastic Hamiltonian Monte Carlo), SGLD(Stochastic gradient Langevin dynamics)")
 
 
 FLAGS = flags.FLAGS
@@ -58,9 +58,9 @@ elif (FLAGS.sampler == "SGLD"):
   inference = ed.SGLD({beta: qbeta}, data={y: y_data})
 elif (FLAGS.sampler == "HMC"):
   inference = ed.HMC({beta: qbeta}, data={y: y_data})
+  inference.run(step_size=10/FLAGS.N, n_steps=10) 
 
-# inference.run(step_size=10/N, n_steps=10)
-inference.run(step_size=10/FLAGS.N, n_steps=10) 
+inference.run(step_size=10/FLAGS.N) 
 
 
 sess = ed.get_session() 
