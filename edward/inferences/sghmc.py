@@ -84,8 +84,8 @@ class SGHMC(MonteCarlo):
       #                learning_rate * tf.convert_to_tensor(grad_log_p) +
       #                stddev * normal)
 
-      # riem_term = 1/(0.5 * old_sample[z]) # For now, fix G (theta) = diag (theta^{-1}) 
-      riem_term = 0 
+      riem_term = 1/(0.5 * old_sample[z]) # For now, fix G (theta) = diag (theta^{-1}) 
+      #riem_term = 0 
       v_sample[z] = ((1.0 - 0.5 * self.friction) * old_v_sample[z] +
                      learning_rate * tf.convert_to_tensor(grad_log_p) + 
                      learning_rate * riem_term + 
